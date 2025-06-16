@@ -12,7 +12,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import UserProvider from "./context/userContext";
+import UserProvider from "./context/UserContext";
 
 const App = () => {
   return (
