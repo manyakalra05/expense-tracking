@@ -26,10 +26,22 @@ app.use(express.json());
 
 connectDB();
 
+connectDB();
+
+// Debug each route registration
+console.log("Registering auth routes...");
 app.use("/api/v1/auth", authRoutes);
+
+console.log("Registering income routes...");
 app.use("/api/v1/income", incomeRoutes);
+
+console.log("Registering expense routes...");
 app.use("/api/v1/expense", expenseRoutes);
+
+console.log("Registering dashboard routes...");
 app.use("/api/v1/dashboard", dashboardRoutes);
+
+console.log("All routes registered successfully!");
 
 
 
