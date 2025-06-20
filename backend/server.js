@@ -55,3 +55,12 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 
 console.log(localStorage.getItem("token")); // should not be null
+
+const path = require('path');
+
+// Serve frontend (React) for all other routes
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+});
