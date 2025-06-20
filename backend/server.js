@@ -2,18 +2,18 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const connectDB = require("./config/db")
-const authRoutes = require("./routes/authRoutes")
-const incomeRoutes = require("./routes/incomeRoutes")
-const expenseRoutes = require("./routes/expenseRoutes")
-const dashboardRoutes = require("./routes/dashboardRoutes")
-
-
-
+const connectDB = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
+const incomeRoutes = require("./routes/incomeRoutes");
+const expenseRoutes = require("./routes/expenseRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 
-// Middleware to handle CORS
+// Connect to DB
+connectDB();
+
+// CORS setup
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "*",
@@ -22,36 +22,30 @@ app.use(
   })
 );
 
+// JSON parsing middleware
 app.use(express.json());
 
-connectDB();
-
-connectDB();
-
-// Debug each route registration
-console.log("Registering auth routes...");
+// Register API routes
 app.use("/api/v1/auth", authRoutes);
-
-console.log("Registering income routes...");
 app.use("/api/v1/income", incomeRoutes);
-
-console.log("Registering expense routes...");
 app.use("/api/v1/expense", expenseRoutes);
-
-console.log("Registering dashboard routes...");
 app.use("/api/v1/dashboard", dashboardRoutes);
 
-console.log("All routes registered successfully!");
-
-
-
-
-// Serve uploads folder
+// Serve static assets (like uploaded images)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// =====================
+// Serve React frontend
+// =====================
+if (process.env.NODE_ENV === "production") {
+  // Serve static files from the React frontend
+  app.use(express.static(path.join(__dirname, "client/build")));
+
+  // For any route not handled by the API, return React's index.html
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "client/build", "index.html"));
+  });
+}
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
-console.log(localStorage.getItem("token")); // should not be null
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
