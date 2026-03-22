@@ -1,4 +1,4 @@
-export const BASE_URL = "https://expense-track-4aln.onrender.com";
+export const BASE_URL = "https://manyakalra05-financial-tracking.onrender.com";
 // utils/apiPaths.js
 export const API_PATHS = {
   AUTH: {
