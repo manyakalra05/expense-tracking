@@ -1,4 +1,4 @@
-export const BASE_URL = "https://manyakalra05-financial-tracking.onrender.com";
+export const BASE_URL = "http://localhost:8000";
 // utils/apiPaths.js
 export const API_PATHS = {
   AUTH: {
