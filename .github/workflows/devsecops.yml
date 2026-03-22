@@ -1,0 +1,163 @@
+name: Full Stack DevSecOps Pipeline
+
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+
+    env:
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      CLIENT_URL: ${{ secrets.CLIENT_URL }}
+
+    steps:
+    # =====================
+    # STEP 1 - Checkout
+    # =====================
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # =====================
+    # STEP 2 - Setup Node
+    # =====================
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+
+    # =====================
+    # STEP 3 - Cache deps
+    # =====================
+    - name: Cache npm
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+    # =====================
+    # STEP 4 - Install deps
+    # =====================
+    - name: Install frontend deps
+      run: |
+        cd frontend/expense-tracker
+        npm install
+
+    - name: Install backend deps
+      run: |
+        cd backend
+        npm install
+
+    # =====================
+    # STEP 5 - Lint
+    # =====================
+    - name: Lint frontend
+      run: |
+        cd frontend/expense-tracker
+        npm run lint || true
+
+    - name: Lint backend
+      run: |
+        cd backend
+        npm run lint || true
+
+    # =====================
+    # STEP 6 - Build frontend
+    # =====================
+    - name: Build frontend
+      run: |
+        cd frontend/expense-tracker
+        npm run build
+
+    # =====================
+    # STEP 7 - Backend health check
+    # =====================
+    - name: Run backend
+      run: |
+        cd backend
+        node index.js &
+        sleep 5
+
+    - name: Test backend API
+      run: |
+        curl http://localhost:5000
+
+    # =====================
+    # STEP 8 - Secret scan
+    # =====================
+    - name: Secret scan
+      run: |
+        echo "Scanning for hardcoded secrets..."
+        grep -rE "(API_KEY|SECRET|TOKEN|PASSWORD)\s*=\s*['\"]" . \
+          --exclude-dir=node_modules \
+          --exclude-dir=.git \
+          || true
+
+    # =====================
+    # STEP 9 - Block .env
+    # =====================
+    - name: Block .env file
+      run: |
+        if [ -f ".env" ]; then
+          echo ".env file detected!"
+          exit 1
+        fi
+
+    # =====================
+    # STEP 10 - Dependency audit
+    # =====================
+    - name: Audit dependencies
+      run: |
+        cd backend && npm audit --audit-level=high || true
+        cd ../frontend/expense-tracker && npm audit --audit-level=high || true
+
+    # =====================
+    # STEP 11 - Code scan
+    # =====================
+    - name: Context scan
+      run: |
+        echo "Scanning for risky patterns..."
+        grep -r "password" . \
+          --exclude-dir=node_modules \
+          --exclude-dir=.git \
+          && echo "Review recommended"
+
+    # =====================
+    # STEP 12 - Deploy frontend (Vercel)
+    # =====================
+    - name: Trigger Vercel Deploy
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "Triggering Vercel..."
+
+        if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK }}" ]; then
+          echo "Missing Vercel hook"
+          exit 1
+        fi
+
+        curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
+
+    # =====================
+    # STEP 13 - Deploy backend (Render)
+    # =====================
+    - name: Trigger Render Deploy
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "Triggering Render..."
+
+        if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+          echo "Missing Render hook"
+          exit 1
+        fi
+
+        curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+    # =====================
+    # STEP 14 - Done
+    # =====================
+    - name: Done
+      run: echo "DevSecOps pipeline completed"
