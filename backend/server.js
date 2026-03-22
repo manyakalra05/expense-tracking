@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const incomeRoutes = require("./routes/incomeRoutes");
@@ -10,10 +11,16 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 
-// Connect to DB
+// =====================
+// Connect to Database
+// =====================
 connectDB();
 
-// CORS setup
+// =====================
+// Middleware
+// =====================
+
+// CORS (allow frontend)
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "*",
@@ -22,30 +29,34 @@ app.use(
   })
 );
 
-// JSON parsing middleware
+// Parse JSON
 app.use(express.json());
 
-// Register API routes
+// =====================
+// API Routes
+// =====================
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/income", incomeRoutes);
 app.use("/api/v1/expense", expenseRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 
-// Serve static assets (like uploaded images)
+// =====================
+// Static Files (uploads only)
+// =====================
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // =====================
-// Serve React frontend
+// Health Check Route (IMPORTANT)
 // =====================
-if (process.env.NODE_ENV === "production") {
-  // Serve static files from the React frontend
-  app.use(express.static(path.join(__dirname, "client/build")));
+app.get("/", (req, res) => {
+  res.send("🚀 API is running...");
+});
 
-  // For any route not handled by the API, return React's index.html
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "client/build", "index.html"));
-  });
-}
-
+// =====================
+// Server Start
+// =====================
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
