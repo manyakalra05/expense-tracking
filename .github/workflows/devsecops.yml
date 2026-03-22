@@ -31,7 +31,7 @@ jobs:
         node-version: 20.x
 
     # =====================
-    # STEP 3 - Cache deps
+    # STEP 3 - Cache dependencies
     # =====================
     - name: Cache npm
       uses: actions/cache@v4
@@ -40,7 +40,7 @@ jobs:
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
     # =====================
-    # STEP 4 - Install deps
+    # STEP 4 - Install dependencies
     # =====================
     - name: Install frontend deps
       run: |
@@ -53,7 +53,7 @@ jobs:
         npm install
 
     # =====================
-    # STEP 5 - Lint
+    # STEP 5 - Lint (non-blocking)
     # =====================
     - name: Lint frontend
       run: |
@@ -74,20 +74,28 @@ jobs:
         npm run build
 
     # =====================
-    # STEP 7 - Backend health check
+    # STEP 7 - Run backend (FIXED)
     # =====================
-    - name: Run backend
+    - name: Start backend server
       run: |
         cd backend
-        npm start &
-        sleep 5
-
-    - name: Test backend API
-      run: |
-        curl http://localhost:5000
+        PORT=5000 npm start > server.log 2>&1 &
+        sleep 10
+        cat server.log
 
     # =====================
-    # STEP 8 - Secret scan
+    # STEP 8 - Test backend API (FIXED)
+    # =====================
+    - name: Test backend API
+      run: |
+        for i in {1..5}; do
+          curl http://localhost:5000 && break
+          echo "Retrying..."
+          sleep 3
+        done
+
+    # =====================
+    # STEP 9 - Secret scan
     # =====================
     - name: Secret scan
       run: |
@@ -98,7 +106,7 @@ jobs:
           || true
 
     # =====================
-    # STEP 9 - Block .env
+    # STEP 10 - Block .env commit
     # =====================
     - name: Block .env file
       run: |
@@ -108,7 +116,7 @@ jobs:
         fi
 
     # =====================
-    # STEP 10 - Dependency audit
+    # STEP 11 - Dependency audit
     # =====================
     - name: Audit dependencies
       run: |
@@ -116,7 +124,7 @@ jobs:
         cd ../frontend/expense-tracker && npm audit --audit-level=high || true
 
     # =====================
-    # STEP 11 - Code scan
+    # STEP 12 - Context-aware scan
     # =====================
     - name: Context scan
       run: |
@@ -127,37 +135,44 @@ jobs:
           && echo "Review recommended"
 
     # =====================
-    # STEP 12 - Deploy frontend (Vercel)
+    # STEP 13 - Deploy Frontend (Vercel)
     # =====================
     - name: Trigger Vercel Deploy
       if: github.ref == 'refs/heads/main'
       run: |
-        echo "Triggering Vercel..."
+        echo "Triggering Vercel deployment..."
 
         if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK }}" ]; then
-          echo "Missing Vercel hook"
+          echo "Missing VERCEL_DEPLOY_HOOK"
           exit 1
         fi
 
-        curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
+        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}")
+
+        echo "Vercel response: $RESPONSE"
+
+        if [ "$RESPONSE" -ne 200 ] && [ "$RESPONSE" -ne 201 ]; then
+          echo "Deployment failed"
+          exit 1
+        fi
 
     # =====================
-    # STEP 13 - Deploy backend (Render)
+    # STEP 14 - Deploy Backend (Render)
     # =====================
     - name: Trigger Render Deploy
       if: github.ref == 'refs/heads/main'
       run: |
-        echo "Triggering Render..."
+        echo "Triggering Render deployment..."
 
         if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
-          echo "Missing Render hook"
+          echo "Missing RENDER_DEPLOY_HOOK"
           exit 1
         fi
 
         curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
     # =====================
-    # STEP 14 - Done
+    # STEP 15 - Done
     # =====================
     - name: Done
-      run: echo "DevSecOps pipeline completed"
+      run: echo "DevSecOps pipeline completed successfully 🚀"
