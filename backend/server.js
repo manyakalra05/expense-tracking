@@ -14,8 +14,11 @@ const app = express();
 // =====================
 // Connect to Database
 // =====================
-connectDB();
-
+if (process.env.MONGO_URI) {
+  connectDB();
+} else {
+  console.log("Skipping DB connection (CI mode)");
+}
 // =====================
 // Middleware
 // =====================
